@@ -1,0 +1,38 @@
+* Docker PMM creation
+
+  docker create -v /opt/prometheus/data -v /opt/consul-data -v /var/lib/mysql -v /var/lib/grafana --name pmm-data percona/pmm-server:1.0.5 /bin/true
+
+  docker run -d -p 80:80 --volumes-from pmm-data --name pmm-server --restart always percona/pmm-server:1.0.5 
+
+* Add mysql instance
+
+  pmm-admin add mysql --user root --host 127.0.0.1 --port 3306 server_1
+
+ sysbench --test=/usr/share/doc/sysbench/tests/db/parallel_prepare.lua --report-interval=10 --mysql-engine-trx=yes --mysql-table-engine=innodb --oltp-table-size=500 --oltp_tables_count=16 --mysql-db=test --mysql-user=root --mysql-host=127.0.0.1 --mysql-socket=/home/ramesh/Percona-Server-5.6.24-rel72.2-Linux.x86_64/socket.sock --num-threads=16 --db-driver=mysql  prepare
+
+
+sysbench --report-interval=1 --oltp-auto-inc=off --max-time=5000 --max-requests=1870000000 --mysql-engine-trx=yes --test=/usr/share/doc/sysbench/tests/db/oltp.lua --init-rng=on --oltp_index_updates=10 --oltp_non_index_updates=10 --oltp_distinct_ranges=15 --oltp_order_ranges=15 --oltp_tables_count=16 --num-threads=16 --oltp_table_size=500  --mysql-db=test --mysql-user=root --mysql-host=127.0.0.1 --mysql-socket=/home/ramesh/Percona-Server-5.6.24-rel72.2-Linux.x86_64/socket.sock --db-driver=mysql run 
+
+
+PMM QA plan :
+/home/ramesh/sw/ps57/bin/mysqld --no-defaults --initialize-insecure --basedir=/home/ramesh/sw/ps57 --datadir=/home/ramesh/sw/ps57/data
+mkdir /home/ramesh/sw/ps57/data/test
+
+for i in `seq 1 50`
+do
+  cp -r /home/ramesh/sw/ps57/data /home/ramesh/sw/ps57/data_${i}
+  
+  /home/ramesh/sw/ps57/bin/mysqld --no-defaults --basedir=/home/ramesh/sw/ps57 --datadir=/home/ramesh/sw/ps57/data_${i} --socket=/home/ramesh/sw/ps57/data_${i}/socket.sock --port=330${i} --log-error=/home/ramesh/sw/ps57/data_${i}/master.err 2>&1 &
+
+  sleep 5
+  sudo pmm-admin add mysql node_${i} --socket=/home/ramesh/sw/ps57/data_${i}/socket.sock --user=root --query-source=perfschema
+ 
+  sysbench --test=/usr/share/doc/sysbench/tests/db/parallel_prepare.lua --report-interval=10 --mysql-engine-trx=yes --mysql-table-engine=innodb --oltp-table-size=500 --oltp_tables_count=16 --mysql-db=test --mysql-user=root --mysql-host=127.0.0.1 --mysql-socket=/home/ramesh/sw/ps57/data_${i}/socket.sock --num-threads=16 --db-driver=mysql  prepare  > /home/ramesh/sw/ps57/data_${i}/sysbench_prepare.log
+ 
+  sysbench --report-interval=1 --oltp-auto-inc=off --max-time=20 --max-requests=1870000000 --mysql-engine-trx=yes --test=/usr/share/doc/sysbench/tests/db/oltp.lua --init-rng=on --oltp_index_updates=10 --oltp_non_index_updates=10 --oltp_distinct_ranges=15 --oltp_order_ranges=15 --oltp_tables_count=16 --num-threads=16 --oltp_table_size=500  --mysql-db=test --mysql-user=root --mysql-host=127.0.0.1 --mysql-socket=/home/ramesh/sw/ps57/data_${i}/socket.sock  --db-driver=mysql run > /home/ramesh/sw/ps57/data_${i}/sysbench_rw.log
+
+  /home/ramesh/sw/ps57/bin/mysqladmin -uroot --socket=/home/ramesh/sw/ps57/data_${i}/socket.sock shutdown
+  rm -rf /home/ramesh/sw/ps57/data_${i}
+done
+
+
