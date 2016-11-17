@@ -1,0 +1,18 @@
+Git help
+
+** Create a TAG 
+
+  * list commit log info in oneline
+	> git log --pretty=oneline
+
+  * Tag a commit
+	> git tag -a v1.2.3 8091f7d
+
+  * List all tags
+	> git tag
+
+  * Show specific tag info
+	> git show v1.2.3
+
+  * Git push tag
+	> git push origin v1.2.3
