@@ -1,5 +1,5 @@
 #!/bin/bash
-# Determine run number for selecting an output directory
+# linkbench perf run
 
 WORKDIR=$1
 LINKBENCH_BASE=${PWD}
@@ -7,19 +7,16 @@ LINKBENCH_BASE=${PWD}
 OUTDIR=${PWD}/res001
 mkdir -p $OUTDIR
 
-
-RUN_NUMBER=`expr $RUN_NUMBER + 1`
-echo $RUN_NUMBER > .run_number
-
-runid="ld_qz_16k_10x_fn128"
-
 PIDS=()
-iostat -dmx 10 >> $OUTDIR/iostat.$runid.res &
+iostat -dmx 10 >> $OUTDIR/iostat.res &
 PIDS+=($!) 
-dstat -t -v --nocolor 10 > $OUTDIR/dstat_plain.$runid.res  &
+dstat -t -v --nocolor 10 > $OUTDIR/dstat_plain.res  &
 PIDS+=($!) 
 
-$LINKBENCH_BASE/bin/linkbench -r -c config/LinkConfigMysql.properties -D requesters=48 -D requestrate=45000 -D dbid=ld_inno_8k_100x -D maxtime=86400 -csvstream $OUTDIR/innodb.12G.comp8x.HDD.csv
+export threadCountList="0001 0002 0004 0008 0016 0032 0064 0128 0256 0512 1024 2048"
+for num_threads in ${threadCountList}; do
+  $LINKBENCH_BASE/bin/linkbench  -D requesters=$num_threads -D maxid1=100000001 -c config/LinkConfigMysql.properties -csvstats $OUTDIR/final_stats_$num_threads.csv -csvstream $OUTDIR/streaming_stats_$num_threads.csv -D requests=5000000 -D maxtime=1800 -r > $OUTDIR/linkbench_run_$num_threads.log 2>&1
+done
 
 echo "Killing stats"
 for var in "${PIDS[@]}"
