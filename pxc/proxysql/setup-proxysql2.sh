@@ -15,7 +15,7 @@ setenforce 0
 
 systemctl start proxysql
 
-mysql --connect-expired-password -uroot -h192.168.100.10 --password="TestPass" -e "CREATE USER 'admin'@'localhost' IDENTIFIED BY 'admin'; GRANT ALL ON *.* TO 'admin'@'localhost';"
+mysql --connect-expired-password -uroot -h192.168.100.10 --password="TestPass" -e "CREATE USER 'admin'@'%' IDENTIFIED BY 'admin'; GRANT ALL ON *.* TO 'admin'@'%';"
 
 sed -i "s/CLUSTER_HOSTNAME='localhost'/CLUSTER_HOSTNAME='192.168.100.10'/" /etc/proxysql-admin.cnf
 
