@@ -14,7 +14,7 @@ yum install -y percona-xtradb-cluster-server
 cat <<EOT >> my.cnf
 [mysqld]
 datadir=/var/lib/mysql
-wsrep_provider=/usr/lib64/galera4/libgalera_smm.so
+wsrep_provider=/usr/lib64/galera3/libgalera_smm.so
 log-error=/var/lib/mysql/mysql.err
 pid-file=/var/lib/mysql/mysql.pid
 log-error-verbosity=3
@@ -33,6 +33,7 @@ innodb_autoinc_lock_mode=2
 wsrep_node_address=192.168.100.$IP_ADDR
 
 wsrep_sst_method=xtrabackup-v2
+wsrep_sst_auth="root:"
 
 # Cluster name
 wsrep_cluster_name=my_centos_cluster
@@ -50,7 +51,7 @@ setenforce 0
 if [[ $NODE -eq 1 ]]; then
   systemctl start mysql@bootstrap.service
   init_pass=$(grep "temporary password" /var/lib/mysql/mysql.err | awk '{print $NF}')
-  mysql --connect-expired-password -uroot --password="$init_pass" -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'TestPass';"
+  mysql --connect-expired-password -uroot --password="$init_pass" -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'TestPass';CREATE USER 'root'@'%' IDENTIFIED BY 'TestPass'; GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION;"
 else
   systemctl start mysql  
 fi
