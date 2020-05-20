@@ -49,17 +49,15 @@ setenforce 0
 
 if [[ $NODE -eq 1 ]]; then
   systemctl start mysql@bootstrap.service
+  init_pass=$(grep "temporary password" /var/lib/mysql/mysql.err | awk '{print $NF}')
+  mysql --connect-expired-password -uroot --password="$init_pass" -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'TestPass';"
 else
   systemctl start mysql  
 fi
 
-init_pass=$(grep "temporary password" /var/lib/mysql/mysql.err | awk '{print $NF}')
-new_pass=$(pwmake pxc)
-mysql --connect-expired-password -uroot --password="$init_pass" -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '$new_pass';"
-
 cat <<EOT >> /root/.my.cnf
 [client]
 user=root
-password=$new_pass
+password=TestPass
 EOT
 
